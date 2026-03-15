@@ -7,6 +7,7 @@ import NodeConfigPanel from '@/components/panels/NodeConfigPanel';
 import BottomPanel from '@/components/panels/BottomPanel';
 import ImportModal from '@/components/modals/ImportModal';
 import DeployModal from '@/components/modals/DeployModal';
+import WorkflowsDrawer from '@/components/modals/WorkflowsDrawer';
 
 const WorkflowCanvas = dynamic(() => import('@/components/canvas/WorkflowCanvas'), {
   ssr: false,
@@ -26,27 +27,18 @@ const WorkflowCanvas = dynamic(() => import('@/components/canvas/WorkflowCanvas'
 export default function Home() {
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
-      {/* Top Toolbar */}
       <Toolbar />
-
-      {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Node Library */}
         <NodeLibrary />
-
-        {/* Center - Canvas + Bottom Panel */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <WorkflowCanvas />
           <BottomPanel />
         </div>
-
-        {/* Right Panel - Node Config */}
         <NodeConfigPanel />
       </div>
-
-      {/* Modals */}
       <ImportModal />
       <DeployModal />
+      <WorkflowsDrawer />
     </div>
   );
 }

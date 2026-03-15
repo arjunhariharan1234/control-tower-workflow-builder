@@ -33,6 +33,7 @@ interface WorkflowState {
   validationErrors: ValidationError[];
   showImportModal: boolean;
   showDeployModal: boolean;
+  showWorkflowsDrawer: boolean;
   bottomPanel: 'json' | 'errors' | 'logs';
   bottomPanelOpen: boolean;
 
@@ -71,6 +72,7 @@ interface WorkflowState {
 
   setShowImportModal: (show: boolean) => void;
   setShowDeployModal: (show: boolean) => void;
+  setShowWorkflowsDrawer: (show: boolean) => void;
   setBottomPanel: (panel: 'json' | 'errors' | 'logs') => void;
   setBottomPanelOpen: (open: boolean) => void;
 
@@ -96,6 +98,7 @@ const DEFAULT_STATE = {
   validationErrors: [],
   showImportModal: false,
   showDeployModal: false,
+  showWorkflowsDrawer: false,
   bottomPanel: 'json' as const,
   bottomPanelOpen: true,
   executionStatus: null,
@@ -351,6 +354,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   setShowImportModal: (show) => set({ showImportModal: show }),
   setShowDeployModal: (show) => set({ showDeployModal: show }),
+  setShowWorkflowsDrawer: (show) => set({ showWorkflowsDrawer: show }),
   setBottomPanel: (panel) => set({ bottomPanel: panel }),
   setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
 

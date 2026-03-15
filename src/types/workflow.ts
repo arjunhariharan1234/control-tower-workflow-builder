@@ -120,3 +120,23 @@ export interface ValidationError {
   message: string;
   severity: 'error' | 'warning';
 }
+
+// ── Saved Workflow & Template Types ───────────────────────────────
+
+export interface SavedWorkflow {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  dsl: WorkflowDSL;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  dsl: WorkflowDSL;
+}
