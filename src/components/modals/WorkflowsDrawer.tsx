@@ -9,17 +9,18 @@ import { WORKFLOW_TEMPLATES } from '@/lib/templates';
 const G = '#FFBE07';
 
 export default function WorkflowsDrawer() {
-  const { showWorkflowsDrawer, setShowWorkflowsDrawer, loadDSL } = useWorkflowStore();
+  const { showWorkflowsDrawer, setShowWorkflowsDrawer, workflowsDrawerTab, loadDSL } = useWorkflowStore();
   const [savedWorkflows, setSavedWorkflows] = useState<SavedWorkflow[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [tab, setTab] = useState<'saved' | 'templates'>('saved');
+  const [tab, setTab] = useState<'saved' | 'templates'>(workflowsDrawerTab || 'saved');
 
   useEffect(() => {
     if (showWorkflowsDrawer) {
       setSavedWorkflows(getSavedWorkflows());
       setDeleteConfirm(null);
+      if (workflowsDrawerTab) setTab(workflowsDrawerTab);
     }
-  }, [showWorkflowsDrawer]);
+  }, [showWorkflowsDrawer, workflowsDrawerTab]);
 
   if (!showWorkflowsDrawer) return null;
 

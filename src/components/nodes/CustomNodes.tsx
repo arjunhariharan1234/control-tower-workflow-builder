@@ -263,40 +263,47 @@ ExclusiveGatewayNode.displayName = 'ExclusiveGatewayNode';
 
 // ── SUB PROCESS ──────────────────────────────────────────────────────
 
-const SubProcessNode = memo(({ data, selected }: NodeProps<NodeData>) => (
-  <div className="relative">
-    <Handle type="target" position={Position.Top} style={handleStyle} />
-    <div
-      className={[
-        'relative flex flex-col px-5 py-4 rounded-xl min-w-[260px] min-h-[90px]',
-        'shadow-lg shadow-black/30',
-        'hover:-translate-y-0.5 transition-all duration-150',
-        selectedRing(selected),
-        getStatusRing(data.executionStatus),
-      ].join(' ')}
-      style={{
-        backgroundColor: '#1e2333',
-        border: `2px dashed ${GOLD}`,
-      }}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <line x1="12" y1="8" x2="12" y2="16" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-        </svg>
-        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>
-          Sub-Process
-        </span>
+const SubProcessNode = memo(({ data, selected }: NodeProps<NodeData>) => {
+  const width = (data.width as number) || 320;
+  const height = (data.height as number) || 200;
+
+  return (
+    <div className="relative" style={{ width, height }}>
+      <Handle type="target" position={Position.Top} style={handleStyle} />
+      <div
+        className={[
+          'rounded-xl overflow-visible',
+          'shadow-lg shadow-black/20',
+          selectedRing(selected),
+          getStatusRing(data.executionStatus),
+        ].join(' ')}
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(30, 35, 51, 0.45)',
+          border: `2px dashed ${GOLD}`,
+          borderRadius: 12,
+        }}
+      >
+        <div className="flex items-center gap-2 px-5 pt-3.5 pb-2">
+          <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: GOLD }}>
+            Sub-Process
+          </span>
+          <span className="text-[11px] text-slate-400 font-medium ml-1 truncate">
+            {data.label}
+          </span>
+        </div>
+        <StatusBadge status={data.executionStatus} />
       </div>
-      <span className="text-[13px] font-semibold text-white leading-tight whitespace-normal break-words max-w-[220px]">
-        {data.label}
-      </span>
-      <StatusBadge status={data.executionStatus} />
+      <Handle type="source" position={Position.Bottom} style={handleStyle} />
     </div>
-    <Handle type="source" position={Position.Bottom} style={handleStyle} />
-  </div>
-));
+  );
+});
 SubProcessNode.displayName = 'SubProcessNode';
 
 // ── BOUNDARY EVENT TIMER ─────────────────────────────────────────────

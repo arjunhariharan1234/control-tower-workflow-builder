@@ -67,12 +67,14 @@ export interface WorkflowTransition {
 
 export interface EscalationLevel {
   level: number;
+  level_key?: string;
   condition: TransitionCondition;
   priority: string;
   description?: string;
 }
 
 export interface EscalationPolicy {
+  type?: string;
   levels: EscalationLevel[];
 }
 

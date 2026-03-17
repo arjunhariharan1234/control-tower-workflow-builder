@@ -24,6 +24,13 @@ function formatCondition(condition: TransitionCondition): string {
   return `${condition.variable} ${condition.operator} ${condition.value}`;
 }
 
+// Subprocess internal layout constants
+const SP_HEADER_H = 52;
+const SP_PAD_X = 30;
+const SP_PAD_TOP = 20;
+const SP_PAD_BOTTOM = 30;
+const SP_CHILD_V_GAP = 50;
+
 export function stepToNode(step: WorkflowStep): Node[] {
   const nodes: Node[] = [];
   const size = getNodeSize(step.step_type);
@@ -45,14 +52,37 @@ export function stepToNode(step: WorkflowStep): Node[] {
     },
   };
 
-  nodes.push(node);
-
-  // NOTE: Subprocess children are rendered as separate top-level nodes
-  // (not nested inside parent) for cleaner layout
   if (step.step_type === 'SUB_PROCESS' && step.steps) {
+    // Calculate container size to fit all children
+    const childSize = getNodeSize('SERVICE_TASK');
+    const childCount = step.steps.length;
+    const containerWidth = childSize.width + SP_PAD_X * 2;
+    const containerHeight =
+      SP_HEADER_H + SP_PAD_TOP +
+      childCount * childSize.height +
+      (childCount - 1) * SP_CHILD_V_GAP +
+      SP_PAD_BOTTOM;
+
+    node.data.width = containerWidth;
+    node.data.height = containerHeight;
+    node.style = { width: containerWidth, height: containerHeight };
+
+    nodes.push(node);
+
+    // Add children positioned inside the parent container
+    let childY = SP_HEADER_H + SP_PAD_TOP;
     for (const childStep of step.steps) {
-      nodes.push(...stepToNode(childStep));
+      const childNodes = stepToNode(childStep);
+      for (const cn of childNodes) {
+        cn.parentNode = step.step_key;
+        cn.extent = 'parent';
+        cn.position = { x: SP_PAD_X, y: childY };
+      }
+      nodes.push(...childNodes);
+      childY += childSize.height + SP_CHILD_V_GAP;
     }
+  } else {
+    nodes.push(node);
   }
 
   return nodes;
@@ -115,15 +145,25 @@ export function parseDSLToGraph(dsl: WorkflowDSL): { nodes: Node[]; edges: Edge[
 
 // ── Auto-Layout: top-to-bottom BFS with proper spacing ──────────────
 
+function getActualSize(node: Node): { width: number; height: number } {
+  const w = node.data?.width as number;
+  const h = node.data?.height as number;
+  if (w && h) return { width: w, height: h };
+  return getNodeSize(node.data?.stepType || '');
+}
+
 function autoLayout(nodes: Node[], edges: Edge[]) {
   if (nodes.length === 0) return;
 
-  // Build adjacency
-  const nodeIds = new Set(nodes.map((n) => n.id));
+  // Only layout top-level nodes — children are positioned inside their parent
+  const topLevelNodes = nodes.filter((n) => !n.parentNode);
+
+  // Build adjacency from top-level nodes only
+  const nodeIds = new Set(topLevelNodes.map((n) => n.id));
   const adj: Record<string, string[]> = {};
   const inDegree: Record<string, number> = {};
 
-  for (const n of nodes) {
+  for (const n of topLevelNodes) {
     adj[n.id] = [];
     inDegree[n.id] = 0;
   }
@@ -137,7 +177,7 @@ function autoLayout(nodes: Node[], edges: Edge[]) {
 
   // BFS topological sort
   const queue: string[] = [];
-  for (const n of nodes) {
+  for (const n of topLevelNodes) {
     if ((inDegree[n.id] || 0) === 0) queue.push(n.id);
   }
 
@@ -166,36 +206,36 @@ function autoLayout(nodes: Node[], edges: Edge[]) {
     queue.push(...next);
   }
 
-  // Add unvisited nodes (disconnected)
-  for (const n of nodes) {
+  // Add unvisited top-level nodes (disconnected)
+  for (const n of topLevelNodes) {
     if (!visited.has(n.id)) {
       rows.push([n.id]);
       visited.add(n.id);
     }
   }
 
-  // Position nodes - top to bottom, centered horizontally
+  // Position top-level nodes - top to bottom, centered horizontally
   const H_GAP = 60;   // horizontal gap between nodes in same row
   const V_GAP = 100;  // vertical gap between rows
 
   let currentY = 40;
 
   for (const row of rows) {
-    // Calculate row dimensions
+    // Use actual dimensions (accounts for dynamically-sized subprocess containers)
     const rowWidths: number[] = row.map((id) => {
-      const node = nodes.find((n) => n.id === id);
-      return getNodeSize(node?.data?.stepType || '').width;
+      const node = topLevelNodes.find((n) => n.id === id);
+      return node ? getActualSize(node).width : 260;
     });
     const rowHeights: number[] = row.map((id) => {
-      const node = nodes.find((n) => n.id === id);
-      return getNodeSize(node?.data?.stepType || '').height;
+      const node = topLevelNodes.find((n) => n.id === id);
+      return node ? getActualSize(node).height : 80;
     });
 
     const totalWidth = rowWidths.reduce((sum, w) => sum + w, 0) + (row.length - 1) * H_GAP;
     let startX = -totalWidth / 2;
 
     for (let i = 0; i < row.length; i++) {
-      const node = nodes.find((n) => n.id === row[i]);
+      const node = topLevelNodes.find((n) => n.id === row[i]);
       if (node) {
         node.position = {
           x: startX + rowWidths[i] / 2 - rowWidths[i] / 2,

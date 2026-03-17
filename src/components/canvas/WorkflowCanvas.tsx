@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import ReactFlow, {
   Controls,
   MiniMap,
@@ -30,23 +30,29 @@ function WorkflowCanvasInner() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, selectNode, selectEdge } = useWorkflowStore();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const rfInstance = useRef<ReactFlowInstance | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const onInit = useCallback((instance: ReactFlowInstance) => { rfInstance.current = instance; }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
+    setIsDragOver(true);
+  }, []);
+
+  const onDragLeave = useCallback(() => {
+    setIsDragOver(false);
   }, []);
 
   const onDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     const data = event.dataTransfer.getData('application/workflow-node');
     if (!data) return;
-    const { type, label } = JSON.parse(data) as { type: StepType; label: string };
+    const { type, label, defaults: nodeDefaults } = JSON.parse(data) as { type: StepType; label: string; defaults?: Record<string, unknown> };
     const bounds = wrapperRef.current?.getBoundingClientRect();
     if (!bounds || !rfInstance.current) return;
     const position = rfInstance.current.project({ x: event.clientX - bounds.left, y: event.clientY - bounds.top });
-    const defaults = NODE_SIZES[type] || { width: 260, height: 80 };
+    const sizeDefaults = NODE_SIZES[type] || { width: 260, height: 80 };
     const stepKey = `${type}_${uuidv4().slice(0, 6).toUpperCase()}`;
 
     addNode({
@@ -56,18 +62,57 @@ function WorkflowCanvasInner() {
       data: {
         label,
         stepType: type,
-        taskType: '',
-        config: {},
+        taskType: (nodeDefaults?.taskType as string) || '',
+        config: (nodeDefaults?.config as Record<string, unknown>) || {},
         mandatoryInput: {},
-        width: defaults.width,
-        height: defaults.height,
+        width: sizeDefaults.width,
+        height: sizeDefaults.height,
         step: { step_key: stepKey, display_name: label, step_type: type },
+        ...nodeDefaults,
       },
     });
+    setIsDragOver(false);
   }, [addNode]);
 
+  const isEmpty = nodes.length === 0;
+
   return (
-    <div ref={wrapperRef} className="flex-1 h-full">
+    <div ref={wrapperRef} className="flex-1 h-full relative playground-drop-zone">
+      {/* Enhanced grid point overlay */}
+      <div
+        className="playground-grid-overlay"
+        style={{
+          opacity: isDragOver ? 0.6 : 0.25,
+          transition: 'opacity 0.3s ease',
+        }}
+      />
+
+      {/* Drag-over highlight border */}
+      {isDragOver && (
+        <div
+          className="absolute inset-0 z-10 pointer-events-none rounded-sm"
+          style={{
+            border: '2px dashed rgba(255, 190, 7, 0.3)',
+            background: 'rgba(255, 190, 7, 0.02)',
+          }}
+        />
+      )}
+
+      {/* Empty state hint */}
+      {isEmpty && !isDragOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="text-center animate-fadeIn" style={{ opacity: 0.5 }}>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ border: '2px dashed rgba(255,190,7,0.2)' }}>
+              <svg className="w-7 h-7" style={{ color: 'rgba(255,190,7,0.4)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium" style={{ color: '#4a4d5a' }}>Drag nodes from the left panel</p>
+            <p className="text-xs mt-1" style={{ color: '#363944' }}>or load a template to get started</p>
+          </div>
+        </div>
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -76,6 +121,7 @@ function WorkflowCanvasInner() {
         onConnect={onConnect}
         onInit={onInit}
         onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
         onDrop={onDrop}
         onNodeClick={(_, node) => selectNode(node.id)}
         onEdgeClick={(_, edge) => selectEdge(edge.id)}
@@ -116,7 +162,7 @@ function WorkflowCanvasInner() {
           maskColor="rgba(0,0,0,0.7)"
           position="bottom-right"
         />
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1a1d27" />
+        <Background variant={BackgroundVariant.Dots} gap={15} size={1.2} color={isDragOver ? 'rgba(255,190,7,0.15)' : '#1e212d'} />
       </ReactFlow>
     </div>
   );

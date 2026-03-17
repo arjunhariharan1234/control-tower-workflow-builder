@@ -34,6 +34,7 @@ interface WorkflowState {
   showImportModal: boolean;
   showDeployModal: boolean;
   showWorkflowsDrawer: boolean;
+  workflowsDrawerTab: 'saved' | 'templates';
   bottomPanel: 'json' | 'errors' | 'logs';
   bottomPanelOpen: boolean;
 
@@ -72,7 +73,7 @@ interface WorkflowState {
 
   setShowImportModal: (show: boolean) => void;
   setShowDeployModal: (show: boolean) => void;
-  setShowWorkflowsDrawer: (show: boolean) => void;
+  setShowWorkflowsDrawer: (show: boolean, tab?: 'saved' | 'templates') => void;
   setBottomPanel: (panel: 'json' | 'errors' | 'logs') => void;
   setBottomPanelOpen: (open: boolean) => void;
 
@@ -99,6 +100,7 @@ const DEFAULT_STATE = {
   showImportModal: false,
   showDeployModal: false,
   showWorkflowsDrawer: false,
+  workflowsDrawerTab: 'saved' as const,
   bottomPanel: 'json' as const,
   bottomPanelOpen: true,
   executionStatus: null,
@@ -354,7 +356,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   setShowImportModal: (show) => set({ showImportModal: show }),
   setShowDeployModal: (show) => set({ showDeployModal: show }),
-  setShowWorkflowsDrawer: (show) => set({ showWorkflowsDrawer: show }),
+  setShowWorkflowsDrawer: (show, tab) => set({ showWorkflowsDrawer: show, ...(tab ? { workflowsDrawerTab: tab } : {}) }),
   setBottomPanel: (panel) => set({ bottomPanel: panel }),
   setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
 

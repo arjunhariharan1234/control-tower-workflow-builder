@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import Link from 'next/link';
 import { useWorkflowStore } from '@/store/workflow-store';
 import { saveWorkflow } from '@/lib/saved-workflows';
 import { generateDSL } from '@/lib/dsl-generator';
@@ -84,8 +85,8 @@ export default function Toolbar() {
   return (
     <>
       <div className="h-12 flex items-center px-4 gap-3 shrink-0" style={{ background: '#13151d', borderBottom: '1px solid #2a2d3a' }}>
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 mr-3">
+        {/* Logo — links back to landing */}
+        <Link href="/" className="flex items-center gap-2.5 mr-3 hover:opacity-80 transition-opacity">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#FFBE07' }}>
             <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -94,7 +95,7 @@ export default function Toolbar() {
             </svg>
           </div>
           <span className="font-bold text-sm tracking-tight" style={{ color: '#FFBE07' }}>Control Tower</span>
-        </div>
+        </Link>
 
         <div className="w-px h-6" style={{ background: '#2a2d3a' }} />
 
