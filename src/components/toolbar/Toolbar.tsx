@@ -172,21 +172,17 @@ export default function Toolbar() {
 
         <div className="w-px h-6" style={{ background: '#2a2d3a' }} />
 
-        {/* Workflow name/code */}
+        {/* Workflow name */}
         <input
           type="text"
           value={workflowName}
-          onChange={(e) => setWorkflowName(e.target.value)}
+          onChange={(e) => {
+            const name = e.target.value;
+            setWorkflowName(name);
+            setWorkflowCode(name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '') || 'UNTITLED');
+          }}
           className="px-2 py-1 bg-transparent border border-transparent hover:border-[#2a2d3a] focus:border-[#FFBE07] rounded text-sm text-white font-medium focus:outline-none transition-colors w-52"
           placeholder="Workflow Name"
-        />
-        <input
-          type="text"
-          value={workflowCode}
-          onChange={(e) => setWorkflowCode(e.target.value.toUpperCase())}
-          className="px-2 py-1 bg-transparent border border-transparent hover:border-[#2a2d3a] focus:border-[#FFBE07] rounded text-xs font-mono focus:outline-none transition-colors w-36"
-          style={{ color: '#9ca3af' }}
-          placeholder="CODE"
         />
 
         <div className="flex-1" />
