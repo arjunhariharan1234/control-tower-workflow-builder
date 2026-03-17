@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWorkflowStore } from '@/store/workflow-store';
 import { saveWorkflow } from '@/lib/saved-workflows';
@@ -24,11 +24,25 @@ export default function Toolbar() {
   } = useWorkflowStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [showSaveToast, setShowSaveToast] = useState(false);
   const [showDescModal, setShowDescModal] = useState(false);
   const [descInput, setDescInput] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleLoadFile = () => fileInputRef.current?.click();
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
+
+  const handleLoadFile = () => { fileInputRef.current?.click(); setMenuOpen(false); };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,7 +58,7 @@ export default function Toolbar() {
     e.target.value = '';
   };
 
-  const handleSaveFile = () => {
+  const handleExportFile = () => {
     const json = generateJSON();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -53,11 +67,13 @@ export default function Toolbar() {
     a.download = `${workflowCode || 'workflow'}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setMenuOpen(false);
   };
 
   const handleSaveToLibrary = () => {
     setDescInput(useWorkflowStore.getState().workflowDescription || '');
     setShowDescModal(true);
+    setMenuOpen(false);
   };
 
   const confirmSaveToLibrary = () => {
@@ -80,13 +96,24 @@ export default function Toolbar() {
     if (errors.filter((e) => e.severity === 'error').length === 0) {
       alert('Workflow is valid!');
     }
+    setMenuOpen(false);
   };
+
+  const menuItems: { label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean }[] = [
+    { label: 'New Workflow', icon: <IconFile />, onClick: () => { newWorkflow(); setMenuOpen(false); } },
+    { label: 'My Workflows', icon: <IconGrid />, onClick: () => { setShowWorkflowsDrawer(true); setMenuOpen(false); }, separator: true },
+    { label: 'Import JSON', icon: <IconUpload />, onClick: () => { setShowImportModal(true); setMenuOpen(false); } },
+    { label: 'Load from File', icon: <IconFolder />, onClick: handleLoadFile },
+    { label: 'Export as JSON', icon: <IconDownload />, onClick: handleExportFile, separator: true },
+    { label: 'Save to Library', icon: <IconSave />, onClick: handleSaveToLibrary, separator: true },
+    { label: 'Validate', icon: <IconCheck />, onClick: handleValidate },
+  ];
 
   return (
     <>
       <div className="h-12 flex items-center px-4 gap-3 shrink-0" style={{ background: '#13151d', borderBottom: '1px solid #2a2d3a' }}>
-        {/* Logo — links back to landing */}
-        <Link href="/" className="flex items-center gap-2.5 mr-3 hover:opacity-80 transition-opacity">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 mr-1 hover:opacity-80 transition-opacity">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#FFBE07' }}>
             <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -94,8 +121,54 @@ export default function Toolbar() {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="font-bold text-sm tracking-tight" style={{ color: '#FFBE07' }}>Control Tower</span>
         </Link>
+
+        {/* Hamburger menu */}
+        <div ref={menuRef} className="relative">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150"
+            style={{
+              background: menuOpen ? '#22252f' : 'transparent',
+              border: `1px solid ${menuOpen ? '#363944' : 'transparent'}`,
+              color: menuOpen ? '#fff' : '#9ca3af',
+            }}
+            onMouseEnter={(e) => { if (!menuOpen) { e.currentTarget.style.background = '#1a1d27'; e.currentTarget.style.color = '#fff'; }}}
+            onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; }}}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+
+          {/* Dropdown */}
+          {menuOpen && (
+            <div
+              className="absolute top-full left-0 mt-1.5 w-52 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden"
+              style={{ background: '#1a1d27', border: '1px solid #2a2d3a' }}
+            >
+              {menuItems.map((item, idx) => (
+                <React.Fragment key={item.label}>
+                  {item.separator && idx > 0 && (
+                    <div className="my-1.5 mx-3" style={{ borderTop: '1px solid #2a2d3a' }} />
+                  )}
+                  <button
+                    onClick={item.onClick}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium transition-colors text-left"
+                    style={{ color: '#d1d5db' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#22252f'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#d1d5db'; }}
+                  >
+                    <span style={{ color: '#6b7280' }}>{item.icon}</span>
+                    {item.label}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="w-px h-6" style={{ background: '#2a2d3a' }} />
 
@@ -118,15 +191,15 @@ export default function Toolbar() {
 
         <div className="flex-1" />
 
-        <Btn onClick={() => setShowWorkflowsDrawer(true)} icon={<IconGrid />}>My Workflows</Btn>
-        <div className="w-px h-5" style={{ background: '#2a2d3a' }} />
-        <Btn onClick={newWorkflow} icon={<IconFile />}>New</Btn>
-        <Btn onClick={() => setShowImportModal(true)} icon={<IconUpload />}>Import JSON</Btn>
-        <Btn onClick={handleLoadFile} icon={<IconFolder />}>Load</Btn>
-        <Btn onClick={handleSaveFile} icon={<IconSave />}>Save</Btn>
-        <Btn onClick={handleSaveToLibrary} icon={<IconLibrary />}>Save to Library</Btn>
-        <Btn onClick={handleValidate} variant="secondary" icon={<IconCheck />}>Validate</Btn>
-        <Btn onClick={() => setShowDeployModal(true)} variant="primary" icon={<IconDeploy />}>Deploy</Btn>
+        {/* Deploy — always visible */}
+        <button
+          onClick={() => setShowDeployModal(true)}
+          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 hover:brightness-110"
+          style={{ background: '#FFBE07', color: '#000' }}
+        >
+          <IconDeploy />
+          Deploy
+        </button>
 
         <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
       </div>
@@ -176,25 +249,6 @@ export default function Toolbar() {
   );
 }
 
-function Btn({ children, onClick, icon, variant = 'default' }: {
-  children: React.ReactNode; onClick: () => void; icon?: React.ReactNode; variant?: 'default' | 'primary' | 'secondary';
-}) {
-  const styles = {
-    default: 'text-[#9ca3af] hover:text-white hover:bg-[#22252f] border border-transparent hover:border-[#2a2d3a]',
-    secondary: 'text-white bg-[#1a1d27] hover:bg-[#22252f] border border-[#2a2d3a] hover:border-[#363944]',
-    primary: 'text-black font-semibold hover:brightness-110 border-0',
-  };
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-150 ${styles[variant]}`}
-      style={variant === 'primary' ? { background: '#FFBE07' } : undefined}
-    >
-      {icon}{children}
-    </button>
-  );
-}
-
 // Tiny SVG icons
 const s = "w-3.5 h-3.5";
 function IconGrid() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>; }
@@ -202,6 +256,6 @@ function IconFile() { return <svg className={s} viewBox="0 0 24 24" fill="none" 
 function IconUpload() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>; }
 function IconFolder() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>; }
 function IconSave() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>; }
-function IconLibrary() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>; }
+function IconDownload() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>; }
 function IconCheck() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>; }
 function IconDeploy() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>; }
