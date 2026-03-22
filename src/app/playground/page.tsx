@@ -12,6 +12,7 @@ import DeployModal from '@/components/modals/DeployModal';
 import WorkflowsDrawer from '@/components/modals/WorkflowsDrawer';
 import { useWorkflowStore } from '@/store/workflow-store';
 import { getTemplateById } from '@/lib/templates';
+import { getSavedWorkflowById } from '@/lib/saved-workflows';
 
 const WorkflowCanvas = dynamic(() => import('@/components/canvas/WorkflowCanvas'), {
   ssr: false,
@@ -39,8 +40,12 @@ function PlaygroundInner() {
 
     const templateId = searchParams.get('template');
     const mode = searchParams.get('mode');
+    const loadId = searchParams.get('load');
 
-    if (templateId) {
+    if (loadId) {
+      const saved = getSavedWorkflowById(loadId);
+      if (saved) loadDSL(saved.dsl);
+    } else if (templateId) {
       const template = getTemplateById(templateId);
       if (template) loadDSL(template.dsl);
     } else if (mode === 'templates') {

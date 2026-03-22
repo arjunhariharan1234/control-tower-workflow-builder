@@ -120,3 +120,28 @@ body {
 .react-flow .react-flow__background {
   opacity: 1 !important;
 }
+
+/* ── Chat page animations ──────────────────────────────────── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slideInRight { animation: slideInRight 0.4s ease-out both; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 33%, rgba(255,190,7,0.08) 50%, transparent 67%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

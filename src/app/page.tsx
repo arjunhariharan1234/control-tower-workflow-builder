@@ -460,11 +460,14 @@ export default function LandingPage() {
             Templates
           </button>
           <button
-            onClick={() => router.push('/playground')}
-            className="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 hover:brightness-110"
+            onClick={() => router.push('/chat')}
+            className="group flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 hover:brightness-110"
             style={{ background: GOLD, color: '#000' }}
           >
-            Open Playground
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
+            AI Builder
           </button>
         </div>
       </nav>
@@ -495,26 +498,42 @@ export default function LandingPage() {
           <p className="text-lg md:text-xl leading-relaxed mb-10 max-w-xl mx-auto" style={{ color: '#9ca3af', backdropFilter: 'blur(4px)' }}>
             From thousands of operational alerts to clean, actionable workflows — design, deploy and automate your SOPs visually in minutes.
           </p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col items-center gap-4">
             <button
-              onClick={() => router.push('/playground?mode=templates')}
-              className="group flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-xl transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 shadow-lg shadow-yellow-900/20"
+              onClick={() => router.push('/chat')}
+              className="group flex items-center gap-2.5 px-8 py-4 text-sm font-bold rounded-xl transition-all duration-200 hover:brightness-110 hover:-translate-y-0.5 shadow-lg shadow-yellow-900/30"
               style={{ background: GOLD, color: '#000' }}
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
-              Start from Template
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                <path d="M8 10h.01M12 10h.01M16 10h.01" />
+              </svg>
+              Describe Your Workflow in Plain English
               <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </button>
-            <button
-              onClick={() => router.push('/playground')}
-              className="group flex items-center gap-2.5 px-7 py-3.5 text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5"
-              style={{ color: '#fff', border: '1px solid #363944', background: 'rgba(26,29,39,0.6)', backdropFilter: 'blur(8px)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFBE07'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#363944'; }}
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-              Build from Scratch
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/playground?mode=templates')}
+                className="group flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5"
+                style={{ color: '#fff', border: '1px solid #363944', background: 'rgba(26,29,39,0.6)', backdropFilter: 'blur(8px)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFBE07'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#363944'; }}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+                Start from Template
+              </button>
+              <span className="text-[10px]" style={{ color: '#4a4d5a' }}>or</span>
+              <button
+                onClick={() => router.push('/playground')}
+                className="group flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5"
+                style={{ color: '#fff', border: '1px solid #363944', background: 'rgba(26,29,39,0.6)', backdropFilter: 'blur(8px)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFBE07'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#363944'; }}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                Visual Builder
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -637,12 +656,12 @@ export default function LandingPage() {
 // ── How it works data ───────────────────────────────────────────────
 const HOW_IT_WORKS = [
   {
-    title: 'Pick or Build',
-    desc: 'Start from a ready-made template or drag-and-drop nodes onto the canvas to build your workflow from scratch.',
+    title: 'Describe in Plain English',
+    desc: 'Type your SOP naturally — "When stoppage detected, call driver, retry 3 times, then escalate to manager." Our AI converts it into a workflow instantly.',
   },
   {
-    title: 'Configure Logic',
-    desc: 'Set event triggers, add conditions and branching, configure calls, notifications, and escalation actions.',
+    title: 'Preview & Simulate',
+    desc: 'See your workflow rendered live. Run a step-by-step simulation to verify the logic, then fine-tune in the visual editor if needed.',
   },
   {
     title: 'Deploy & Automate',
