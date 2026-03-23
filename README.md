@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Control Tower — Workflow Automation Platform
 
-## Getting Started
+A visual workflow builder for logistics operations. Design, test, and deploy automated SOPs using natural language or drag-and-drop — with 40+ integrations, webhook triggers, cron schedules, and execution history.
 
-First, run the development server:
+**Stack:** Next.js 14 · TypeScript · React Flow · Zustand · Tailwind CSS
+
+---
+
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Routes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page with globe animation and feature showcase |
+| `/chat` | AI Builder — describe workflows in plain English |
+| `/playground` | Visual drag-and-drop workflow editor |
+| `/integrations` | Browse and connect 40+ third-party integrations |
+| `/triggers` | Configure webhooks, cron schedules, and event triggers |
+| `/api/webhook/[id]` | Webhook endpoint (POST/GET) to trigger workflows |
+| `/api/deploy` | Deploy workflow DSL to backend |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Features
 
-## Learn More
+- **AI Builder** — Natural language → workflow DSL via rule-based parser
+- **Visual Playground** — React Flow canvas with 30+ node templates, live JSON preview, validation
+- **Simulation Engine** — Run workflows step-by-step with visual node status feedback
+- **Execution History** — Persistent run log with replay, filtering, per-step timeline
+- **Integrations Marketplace** — 40 integrations across 11 categories (Fyno, Ozonetel, Kapture, Slack, AWS, etc.)
+- **Webhook Triggers** — Auto-generated URLs, test-from-UI, cURL examples
+- **Cron Schedules** — 12 presets + custom expressions with timezone support
+- **Event Triggers** — 11 operational event types with source configuration
+- **4 Built-in Templates** — Long Stoppage, Transit Delay, Route Deviation, Overspeeding
 
-To learn more about Next.js, take a look at the following resources:
+## Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Document | Description |
+|----------|-------------|
+| [Product Context](docs/PRODUCT-CONTEXT.md) | Vision, architecture, tech stack, API-first philosophy |
+| [AI Builder](AI-BUILDER.md) | NL parser engine, 5-phase conversion, thinking animation |
+| [Visual Playground](docs/VISUAL-PLAYGROUND.md) | Canvas editor, node types, toolbar, state management |
+| [Integrations Marketplace](docs/INTEGRATIONS-MARKETPLACE.md) | 40 integrations, connection management, registry design |
+| [Execution History](docs/EXECUTION-HISTORY.md) | Simulation engine, replay, persistent run storage |
+| [Triggers & Schedules](docs/TRIGGERS-AND-SCHEDULES.md) | Webhooks, cron, events, API endpoint |
+| [Landing Page](docs/LANDING-PAGE.md) | Globe animation, hero, sections, navigation |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+src/
+├── app/
+│   ├── page.tsx                     # Landing page
+│   ├── chat/page.tsx               # AI Builder
+│   ├── playground/page.tsx         # Visual editor
+│   ├── integrations/page.tsx       # Marketplace
+│   ├── triggers/page.tsx           # Trigger management
+│   └── api/
+│       ├── deploy/route.ts         # Deploy endpoint
+│       └── webhook/[workflowId]/   # Webhook trigger endpoint
+├── components/
+│   ├── canvas/                     # React Flow canvas
+│   ├── nodes/                      # Custom node components
+│   ├── panels/                     # NodeLibrary, NodeConfig, BottomPanel
+│   ├── toolbar/                    # Toolbar with menu
+│   ├── modals/                     # Import, Deploy, Workflows, ExecutionHistory
+│   └── integrations/               # Marketplace components
+├── lib/
+│   ├── integrations/               # Registry (40 integrations), connections, categories
+│   ├── templates/                  # 4 built-in workflow templates
+│   ├── triggers.ts                 # Trigger CRUD + logs
+│   ├── execution-history.ts        # Execution run persistence
+│   ├── nl-to-workflow.ts           # NL parser engine
+│   ├── dsl-parser.ts               # DSL → React Flow
+│   ├── dsl-generator.ts            # React Flow → DSL
+│   └── dsl-validator.ts            # Validation rules
+├── store/
+│   ├── workflow-store.ts           # Playground state (Zustand)
+│   └── integration-store.ts        # Marketplace state (Zustand)
+└── types/
+    ├── workflow.ts                  # DSL, execution, validation types
+    ├── integration.ts               # Integration, connection types
+    └── trigger.ts                   # Trigger, schedule, webhook types
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploys automatically to Vercel on push to `main`.
