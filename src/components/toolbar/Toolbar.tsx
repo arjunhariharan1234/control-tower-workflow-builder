@@ -22,6 +22,11 @@ export default function Toolbar() {
     setShowWorkflowsDrawer,
     validateWorkflow,
     generateJSON,
+    runSimulation,
+    stopSimulation,
+    simulationRunning,
+    setShowHistoryDrawer,
+    clearExecution,
   } = useWorkflowStore();
 
   const router = useRouter();
@@ -109,6 +114,7 @@ export default function Toolbar() {
     { label: 'Export as JSON', icon: <IconDownload />, onClick: handleExportFile, separator: true },
     { label: 'Save to Library', icon: <IconSave />, onClick: handleSaveToLibrary, separator: true },
     { label: 'Validate', icon: <IconCheck />, onClick: handleValidate },
+    { label: 'Execution History', icon: <IconHistory />, onClick: () => { setShowHistoryDrawer(true); setMenuOpen(false); } },
     { label: 'Integrations', icon: <IconPlug />, onClick: () => { router.push('/integrations'); setMenuOpen(false); }, separator: true },
   ];
 
@@ -190,6 +196,40 @@ export default function Toolbar() {
 
         <div className="flex-1" />
 
+        {/* Run / Stop Simulation */}
+        {simulationRunning ? (
+          <button
+            onClick={() => { stopSimulation(); }}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150"
+            style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}
+          >
+            <IconStop />
+            Stop
+          </button>
+        ) : (
+          <button
+            onClick={() => { clearExecution(); runSimulation(); }}
+            disabled={nodes.length === 0}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 disabled:opacity-40"
+            style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}
+          >
+            <IconPlay />
+            Run
+          </button>
+        )}
+
+        {/* History */}
+        <button
+          onClick={() => setShowHistoryDrawer(true)}
+          className="flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-150"
+          style={{ color: '#9ca3af', border: '1px solid transparent' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#1a1d27'; e.currentTarget.style.color = '#fff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9ca3af'; }}
+          title="Execution History"
+        >
+          <IconHistory />
+        </button>
+
         {/* Deploy — always visible */}
         <button
           onClick={() => setShowDeployModal(true)}
@@ -259,3 +299,6 @@ function IconDownload() { return <svg className={s} viewBox="0 0 24 24" fill="no
 function IconCheck() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>; }
 function IconDeploy() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>; }
 function IconPlug() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a6 6 0 01-12 0V8z"/></svg>; }
+function IconPlay() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5,3 19,12 5,21" /></svg>; }
+function IconStop() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>; }
+function IconHistory() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>; }

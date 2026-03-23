@@ -123,6 +123,33 @@ export interface ValidationError {
   severity: 'error' | 'warning';
 }
 
+// ── Execution History Types ──────────────────────────────────────
+
+export interface ExecutionRun {
+  id: string;
+  workflowName: string;
+  workflowCode: string;
+  status: ExecutionStatus;
+  startedAt: string;
+  completedAt?: string;
+  duration?: number; // ms
+  stepResults: StepExecutionResult[];
+  logs: string[];
+  nodeCount: number;
+  failedStepKey?: string;
+}
+
+export interface StepExecutionResult {
+  step_key: string;
+  display_name: string;
+  step_type: StepType;
+  status: ExecutionStatus;
+  started_at: string;
+  completed_at?: string;
+  duration?: number;
+  error?: string;
+}
+
 // ── Saved Workflow & Template Types ───────────────────────────────
 
 export interface SavedWorkflow {

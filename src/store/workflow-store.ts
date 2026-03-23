@@ -10,10 +10,12 @@ import {
   EdgeChange,
   MarkerType,
 } from 'reactflow';
-import { WorkflowDSL, WorkflowMetadata, ValidationError, StepExecution, ExecutionStatus } from '@/types/workflow';
+import { WorkflowDSL, WorkflowMetadata, ValidationError, StepExecution, ExecutionStatus, ExecutionRun, StepExecutionResult } from '@/types/workflow';
 import { parseDSLToGraph } from '@/lib/dsl-parser';
 import { generateDSL } from '@/lib/dsl-generator';
 import { validateDSL, validateGraph } from '@/lib/dsl-validator';
+import { saveExecutionRun, getExecutionHistory } from '@/lib/execution-history';
+import { v4 as uuidv4 } from 'uuid';
 
 interface WorkflowState {
   // Graph state
@@ -42,6 +44,13 @@ interface WorkflowState {
   executionStatus: ExecutionStatus | null;
   stepExecutions: StepExecution[];
   executionLogs: string[];
+
+  // Simulation state
+  simulationRunning: boolean;
+  simulationSpeed: number;
+  replayingRunId: string | null;
+  executionHistory: ExecutionRun[];
+  showHistoryDrawer: boolean;
 
   // Deployment state
   deploymentStatus: 'idle' | 'deploying' | 'success' | 'error';
@@ -83,6 +92,13 @@ interface WorkflowState {
   addExecutionLog: (log: string) => void;
   clearExecution: () => void;
 
+  runSimulation: () => Promise<void>;
+  stopSimulation: () => void;
+  replayExecution: (run: ExecutionRun) => Promise<void>;
+  setSimulationSpeed: (speed: number) => void;
+  loadExecutionHistory: () => void;
+  setShowHistoryDrawer: (show: boolean) => void;
+
   newWorkflow: () => void;
 }
 
@@ -106,6 +122,11 @@ const DEFAULT_STATE = {
   executionStatus: null,
   stepExecutions: [],
   executionLogs: [],
+  simulationRunning: false,
+  simulationSpeed: 1000,
+  replayingRunId: null,
+  executionHistory: [],
+  showHistoryDrawer: false,
   deploymentStatus: 'idle' as const,
   deploymentMessage: '',
 };
@@ -412,6 +433,245 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   clearExecution: () => {
     set({ executionStatus: null, stepExecutions: [], executionLogs: [] });
+  },
+
+  runSimulation: async () => {
+    const state = get();
+    if (state.simulationRunning || state.nodes.length === 0) return;
+
+    const runId = uuidv4();
+    const startedAt = new Date().toISOString();
+    const stepResults: StepExecutionResult[] = [];
+    const logs: string[] = [];
+
+    // Collect steps in topological order via edges
+    const orderedNodeIds: string[] = [];
+    const visited = new Set<string>();
+    const startNode = state.nodes.find((n) => n.data?.stepType === 'START_EVENT');
+
+    if (startNode) {
+      const queue = [startNode.id];
+      while (queue.length > 0) {
+        const nodeId = queue.shift()!;
+        if (visited.has(nodeId)) continue;
+        visited.add(nodeId);
+        orderedNodeIds.push(nodeId);
+        const outgoing = state.edges.filter((e) => e.source === nodeId);
+        for (const edge of outgoing) {
+          if (!visited.has(edge.target)) queue.push(edge.target);
+        }
+      }
+    }
+    // Add any unvisited nodes
+    for (const n of state.nodes) {
+      if (!visited.has(n.id)) orderedNodeIds.push(n.id);
+    }
+
+    // Reset all nodes to PENDING
+    const pendingNodes = state.nodes.map((n) => ({
+      ...n,
+      data: { ...n.data, executionStatus: 'PENDING' as ExecutionStatus },
+    }));
+    set({
+      simulationRunning: true,
+      replayingRunId: null,
+      executionStatus: 'RUNNING',
+      executionLogs: [],
+      nodes: pendingNodes,
+      bottomPanel: 'logs',
+      bottomPanelOpen: true,
+    });
+
+    const ts = () => new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const addLog = (msg: string) => {
+      const entry = `[${ts()}] ${msg}`;
+      logs.push(entry);
+      set((s) => ({ executionLogs: [...s.executionLogs, entry] }));
+    };
+
+    addLog(`▶ Simulation started — ${state.workflowName} (${orderedNodeIds.length} steps)`);
+
+    let failed = false;
+    let failedStepKey: string | undefined;
+
+    for (const nodeId of orderedNodeIds) {
+      if (!get().simulationRunning) {
+        addLog('⏹ Simulation stopped by user');
+        break;
+      }
+
+      const node = get().nodes.find((n) => n.id === nodeId);
+      if (!node) continue;
+
+      const stepStart = new Date().toISOString();
+
+      // Mark RUNNING
+      set((s) => ({
+        nodes: s.nodes.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, executionStatus: 'RUNNING' as ExecutionStatus } } : n),
+      }));
+      addLog(`⟳ Running: ${node.data?.label || nodeId}`);
+
+      // Simulate execution time
+      const speed = get().simulationSpeed;
+      const jitter = Math.random() * speed * 0.4;
+      await new Promise((r) => setTimeout(r, speed + jitter));
+
+      if (!get().simulationRunning) break;
+
+      // Simulate ~5% random failure for non-start/end events
+      const stepType = node.data?.stepType as string;
+      const canFail = !['START_EVENT', 'END_EVENT'].includes(stepType);
+      const didFail = canFail && Math.random() < 0.05;
+
+      const stepEnd = new Date().toISOString();
+      const status: ExecutionStatus = didFail ? 'FAILED' : 'COMPLETED';
+
+      set((s) => ({
+        nodes: s.nodes.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, executionStatus: status } } : n),
+      }));
+
+      const result: StepExecutionResult = {
+        step_key: nodeId,
+        display_name: node.data?.label || nodeId,
+        step_type: stepType as StepExecutionResult['step_type'],
+        status,
+        started_at: stepStart,
+        completed_at: stepEnd,
+        duration: new Date(stepEnd).getTime() - new Date(stepStart).getTime(),
+        error: didFail ? `Simulated failure at ${node.data?.label}` : undefined,
+      };
+      stepResults.push(result);
+
+      if (didFail) {
+        addLog(`✕ Failed: ${node.data?.label || nodeId} — Simulated failure`);
+        failed = true;
+        failedStepKey = nodeId;
+        // Mark remaining nodes as SKIPPED
+        const remaining = orderedNodeIds.slice(orderedNodeIds.indexOf(nodeId) + 1);
+        set((s) => ({
+          nodes: s.nodes.map((n) => remaining.includes(n.id) ? { ...n, data: { ...n.data, executionStatus: 'SKIPPED' as ExecutionStatus } } : n),
+        }));
+        for (const remId of remaining) {
+          const remNode = get().nodes.find((n) => n.id === remId);
+          stepResults.push({
+            step_key: remId,
+            display_name: remNode?.data?.label || remId,
+            step_type: (remNode?.data?.stepType || 'SERVICE_TASK') as StepExecutionResult['step_type'],
+            status: 'SKIPPED',
+            started_at: stepEnd,
+            completed_at: stepEnd,
+            duration: 0,
+          });
+        }
+        break;
+      } else {
+        addLog(`✓ Completed: ${node.data?.label || nodeId}`);
+      }
+    }
+
+    const completedAt = new Date().toISOString();
+    const finalStatus: ExecutionStatus = !get().simulationRunning ? 'FAILED' : failed ? 'FAILED' : 'COMPLETED';
+
+    addLog(finalStatus === 'COMPLETED'
+      ? `✓ Simulation completed successfully`
+      : `✕ Simulation ended with status: ${finalStatus}`);
+
+    const run: ExecutionRun = {
+      id: runId,
+      workflowName: state.workflowName,
+      workflowCode: state.workflowCode,
+      status: finalStatus,
+      startedAt,
+      completedAt,
+      duration: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
+      stepResults,
+      logs,
+      nodeCount: orderedNodeIds.length,
+      failedStepKey,
+    };
+
+    saveExecutionRun(run);
+
+    set({
+      simulationRunning: false,
+      executionStatus: finalStatus,
+      executionHistory: getExecutionHistory(),
+    });
+  },
+
+  stopSimulation: () => {
+    set({ simulationRunning: false });
+  },
+
+  replayExecution: async (run: ExecutionRun) => {
+    const state = get();
+    if (state.simulationRunning) return;
+
+    set({
+      replayingRunId: run.id,
+      executionLogs: [],
+      bottomPanel: 'logs',
+      bottomPanelOpen: true,
+      showHistoryDrawer: false,
+    });
+
+    // Reset all nodes to PENDING
+    set((s) => ({
+      nodes: s.nodes.map((n) => ({
+        ...n,
+        data: { ...n.data, executionStatus: 'PENDING' as ExecutionStatus },
+      })),
+      simulationRunning: true,
+    }));
+
+    const addLog = (msg: string) => {
+      set((s) => ({ executionLogs: [...s.executionLogs, msg] }));
+    };
+
+    addLog(`▶ Replaying execution: ${run.id.slice(0, 8)}... (${run.workflowName})`);
+    addLog(`  Originally ran at ${new Date(run.startedAt).toLocaleString()}`);
+
+    for (const step of run.stepResults) {
+      if (!get().simulationRunning) break;
+
+      // Mark RUNNING
+      set((s) => ({
+        nodes: s.nodes.map((n) => n.id === step.step_key ? { ...n, data: { ...n.data, executionStatus: 'RUNNING' as ExecutionStatus } } : n),
+      }));
+      addLog(`[${new Date(step.started_at).toLocaleTimeString()}] ⟳ ${step.display_name}`);
+
+      await new Promise((r) => setTimeout(r, 600));
+      if (!get().simulationRunning) break;
+
+      // Apply final status
+      set((s) => ({
+        nodes: s.nodes.map((n) => n.id === step.step_key ? { ...n, data: { ...n.data, executionStatus: step.status } } : n),
+      }));
+
+      if (step.status === 'COMPLETED') {
+        addLog(`[${new Date(step.completed_at || step.started_at).toLocaleTimeString()}] ✓ ${step.display_name} (${step.duration}ms)`);
+      } else if (step.status === 'FAILED') {
+        addLog(`[${new Date(step.completed_at || step.started_at).toLocaleTimeString()}] ✕ ${step.display_name} — ${step.error}`);
+      } else if (step.status === 'SKIPPED') {
+        addLog(`  ⊘ ${step.display_name} — Skipped`);
+        set((s) => ({
+          nodes: s.nodes.map((n) => n.id === step.step_key ? { ...n, data: { ...n.data, executionStatus: 'SKIPPED' as ExecutionStatus } } : n),
+        }));
+      }
+    }
+
+    addLog(`▶ Replay complete — Status: ${run.status} | Duration: ${run.duration}ms`);
+    set({ simulationRunning: false, replayingRunId: null, executionStatus: run.status });
+  },
+
+  setSimulationSpeed: (speed) => set({ simulationSpeed: speed }),
+  loadExecutionHistory: () => set({ executionHistory: getExecutionHistory() }),
+  setShowHistoryDrawer: (show) => {
+    if (show) {
+      set({ executionHistory: getExecutionHistory(), showHistoryDrawer: true });
+    } else {
+      set({ showHistoryDrawer: false });
+    }
   },
 
   newWorkflow: () => {

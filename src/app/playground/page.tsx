@@ -10,6 +10,7 @@ import BottomPanel from '@/components/panels/BottomPanel';
 import ImportModal from '@/components/modals/ImportModal';
 import DeployModal from '@/components/modals/DeployModal';
 import WorkflowsDrawer from '@/components/modals/WorkflowsDrawer';
+import ExecutionHistoryDrawer from '@/components/modals/ExecutionHistoryDrawer';
 import { useWorkflowStore } from '@/store/workflow-store';
 import { getTemplateById } from '@/lib/templates';
 import { getSavedWorkflowById } from '@/lib/saved-workflows';
@@ -74,6 +75,7 @@ export default function PlaygroundPage() {
       <ImportModal />
       <DeployModal />
       <WorkflowsDrawer />
+      <ExecutionHistoryDrawer />
     </div>
   );
 }

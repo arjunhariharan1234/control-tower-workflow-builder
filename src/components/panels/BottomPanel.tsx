@@ -6,7 +6,7 @@ import { useWorkflowStore } from '@/store/workflow-store';
 const G = '#FFBE07';
 
 export default function BottomPanel() {
-  const { jsonPreview, validationErrors, executionLogs, bottomPanel, bottomPanelOpen, setBottomPanel, setBottomPanelOpen } = useWorkflowStore();
+  const { jsonPreview, validationErrors, executionLogs, bottomPanel, bottomPanelOpen, setBottomPanel, setBottomPanelOpen, simulationRunning, executionStatus } = useWorkflowStore();
   const errorCount = validationErrors.filter((e) => e.severity === 'error').length;
   const warningCount = validationErrors.filter((e) => e.severity === 'warning').length;
   const [copied, setCopied] = useState(false);
@@ -27,7 +27,12 @@ export default function BottomPanel() {
           {errorCount > 0 && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold">{errorCount}</span>}
           {warningCount > 0 && <span className="ml-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-[9px] font-bold">{warningCount}</span>}
         </Tab>
-        <Tab active={bottomPanel === 'logs'} onClick={() => { setBottomPanel('logs'); setBottomPanelOpen(true); }}>Logs</Tab>
+        <Tab active={bottomPanel === 'logs'} onClick={() => { setBottomPanel('logs'); setBottomPanelOpen(true); }}>
+          Logs
+          {simulationRunning && <span className="ml-1.5 w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#10b981', display: 'inline-block' }} />}
+          {!simulationRunning && executionStatus === 'COMPLETED' && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold" style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>OK</span>}
+          {!simulationRunning && executionStatus === 'FAILED' && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold" style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444' }}>FAIL</span>}
+        </Tab>
         <div className="flex-1" />
         {bottomPanel === 'json' && jsonPreview && (
           <button
@@ -69,11 +74,20 @@ export default function BottomPanel() {
             </div>
           )}
           {bottomPanel === 'logs' && (
-            <div className="p-3 space-y-1">
+            <div className="p-3 space-y-0.5">
               {executionLogs.length === 0
-                ? <p className="text-xs" style={{ color: '#6b7280' }}>No execution logs yet.</p>
-                : executionLogs.map((log, i) => <div key={i} className="text-xs font-mono" style={{ color: '#d1d5db' }}>{log}</div>)
+                ? <p className="text-xs" style={{ color: '#6b7280' }}>No execution logs yet. Click &quot;Run&quot; to simulate your workflow.</p>
+                : executionLogs.map((log, i) => {
+                  const color = log.includes('✓') ? '#10b981' : log.includes('✕') ? '#ef4444' : log.includes('⟳') ? '#3b82f6' : log.includes('▶') ? G : log.includes('⊘') ? '#6b7280' : '#d1d5db';
+                  return <div key={i} className="text-xs font-mono" style={{ color }}>{log}</div>;
+                })
               }
+              {simulationRunning && (
+                <div className="flex items-center gap-2 mt-2 text-xs font-medium" style={{ color: '#3b82f6' }}>
+                  <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#3b82f6' }} />
+                  Simulation running...
+                </div>
+              )}
             </div>
           )}
         </div>
