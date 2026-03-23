@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useWorkflowStore } from '@/store/workflow-store';
 import { saveWorkflow } from '@/lib/saved-workflows';
 import { generateDSL } from '@/lib/dsl-generator';
@@ -23,6 +24,7 @@ export default function Toolbar() {
     generateJSON,
   } = useWorkflowStore();
 
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [showSaveToast, setShowSaveToast] = useState(false);
@@ -107,6 +109,7 @@ export default function Toolbar() {
     { label: 'Export as JSON', icon: <IconDownload />, onClick: handleExportFile, separator: true },
     { label: 'Save to Library', icon: <IconSave />, onClick: handleSaveToLibrary, separator: true },
     { label: 'Validate', icon: <IconCheck />, onClick: handleValidate },
+    { label: 'Integrations', icon: <IconPlug />, onClick: () => { router.push('/integrations'); setMenuOpen(false); }, separator: true },
   ];
 
   return (
@@ -255,3 +258,4 @@ function IconSave() { return <svg className={s} viewBox="0 0 24 24" fill="none" 
 function IconDownload() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>; }
 function IconCheck() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>; }
 function IconDeploy() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>; }
+function IconPlug() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a6 6 0 01-12 0V8z"/></svg>; }

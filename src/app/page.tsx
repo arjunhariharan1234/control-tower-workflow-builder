@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { WORKFLOW_TEMPLATES } from '@/lib/templates';
+import { INTEGRATIONS } from '@/lib/integrations/registry';
+import { CATEGORIES } from '@/lib/integrations/categories';
 
 const GOLD = '#FFBE07';
 
@@ -451,6 +453,15 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            onClick={() => router.push('/integrations')}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+            style={{ color: '#d1d5db', border: '1px solid #2a2d3a' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFBE07'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2a2d3a'; e.currentTarget.style.color = '#d1d5db'; }}
+          >
+            Integrations
+          </button>
+          <button
             onClick={() => router.push('/playground?mode=templates')}
             className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
             style={{ color: '#d1d5db', border: '1px solid #2a2d3a' }}
@@ -511,7 +522,7 @@ export default function LandingPage() {
               Describe Your Workflow in Plain English
               <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-center">
               <button
                 onClick={() => router.push('/playground?mode=templates')}
                 className="group flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5"
@@ -532,6 +543,17 @@ export default function LandingPage() {
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                 Visual Builder
+              </button>
+              <span className="text-[10px]" style={{ color: '#4a4d5a' }}>or</span>
+              <button
+                onClick={() => router.push('/integrations')}
+                className="group flex items-center gap-2 px-5 py-2.5 text-xs font-semibold rounded-lg transition-all duration-200 hover:-translate-y-0.5"
+                style={{ color: '#fff', border: '1px solid #363944', background: 'rgba(26,29,39,0.6)', backdropFilter: 'blur(8px)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFBE07'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#363944'; }}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a6 6 0 01-12 0V8z"/></svg>
+                Explore Integrations
               </button>
             </div>
           </div>
@@ -632,6 +654,67 @@ export default function LandingPage() {
               </div>
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* ── Integrations Showcase ─────────────────────────────────── */}
+      <section className="px-8 py-20 max-w-6xl mx-auto w-full">
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">40+ Integrations</h2>
+            <p className="text-sm" style={{ color: '#6b7280' }}>Connect your workflows to notifications, telephony, CRM, payments, AI, and more — all API-first.</p>
+          </div>
+          <button
+            onClick={() => router.push('/integrations')}
+            className="text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+            style={{ color: GOLD, border: `1px solid rgba(255,190,7,0.3)` }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,190,7,0.1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            View All Integrations
+          </button>
+        </div>
+
+        {/* Featured integrations grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8">
+          {INTEGRATIONS.filter((i) => i.popular).map((integration) => (
+            <button
+              key={integration.id}
+              onClick={() => router.push('/integrations')}
+              className="group flex flex-col items-center gap-2.5 p-4 rounded-xl transition-all duration-200 hover:-translate-y-1"
+              style={{ background: '#13151d', border: '1px solid #2a2d3a' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = integration.color; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#2a2d3a'; }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold"
+                style={{ background: `${integration.color}20`, color: integration.color }}
+              >
+                {integration.icon}
+              </div>
+              <span className="text-xs font-semibold text-white text-center">{integration.name}</span>
+              <span className="text-[10px]" style={{ color: '#6b7280' }}>
+                {integration.actions.length} action{integration.actions.length !== 1 ? 's' : ''}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Category pills */}
+        <div className="flex flex-wrap justify-center gap-2">
+          {Object.entries(CATEGORIES).map(([id, cat]) => {
+            const count = INTEGRATIONS.filter((i) => i.category === id).length;
+            return (
+              <button
+                key={id}
+                onClick={() => router.push('/integrations')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all hover:brightness-125"
+                style={{ background: `${cat.color}10`, color: cat.color, border: `1px solid ${cat.color}25` }}
+              >
+                {cat.icon} {cat.label} <span className="opacity-60">({count})</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

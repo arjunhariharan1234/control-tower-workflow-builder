@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useWorkflowStore } from '@/store/workflow-store';
 
 const G = '#FFBE07';
@@ -9,6 +9,14 @@ export default function BottomPanel() {
   const { jsonPreview, validationErrors, executionLogs, bottomPanel, bottomPanelOpen, setBottomPanel, setBottomPanelOpen } = useWorkflowStore();
   const errorCount = validationErrors.filter((e) => e.severity === 'error').length;
   const warningCount = validationErrors.filter((e) => e.severity === 'warning').length;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyJson = async () => {
+    if (!jsonPreview) return;
+    await navigator.clipboard.writeText(jsonPreview);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className={`flex flex-col transition-all duration-200 ${bottomPanelOpen ? 'h-60' : 'h-9'}`} style={{ background: '#13151d', borderTop: '1px solid #2a2d3a' }}>
@@ -21,6 +29,20 @@ export default function BottomPanel() {
         </Tab>
         <Tab active={bottomPanel === 'logs'} onClick={() => { setBottomPanel('logs'); setBottomPanelOpen(true); }}>Logs</Tab>
         <div className="flex-1" />
+        {bottomPanel === 'json' && jsonPreview && (
+          <button
+            onClick={handleCopyJson}
+            className="flex items-center gap-1 px-2 py-1 mr-1 rounded text-[11px] font-medium transition-all"
+            style={{ color: copied ? '#10b981' : '#6b7280', background: copied ? '#10b98115' : 'transparent' }}
+          >
+            {copied ? (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20,6 9,17 4,12"/></svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            )}
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        )}
         <button onClick={() => setBottomPanelOpen(!bottomPanelOpen)} className="p-1" style={{ color: '#6b7280' }}>
           <svg className={`w-4 h-4 transition-transform ${bottomPanelOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18,15 12,9 6,15"/></svg>
         </button>
