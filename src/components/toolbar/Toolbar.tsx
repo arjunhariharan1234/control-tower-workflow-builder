@@ -115,7 +115,8 @@ export default function Toolbar() {
     { label: 'Save to Library', icon: <IconSave />, onClick: handleSaveToLibrary, separator: true },
     { label: 'Validate', icon: <IconCheck />, onClick: handleValidate },
     { label: 'Execution History', icon: <IconHistory />, onClick: () => { setShowHistoryDrawer(true); setMenuOpen(false); } },
-    { label: 'Integrations', icon: <IconPlug />, onClick: () => { router.push('/integrations'); setMenuOpen(false); }, separator: true },
+    { label: 'Integrations', icon: <IconPlug />, onClick: () => { router.push('/integrations'); setMenuOpen(false); } },
+    { label: 'Triggers & Schedules', icon: <IconBolt />, onClick: () => { router.push('/triggers'); setMenuOpen(false); }, separator: true },
   ];
 
   return (
@@ -302,3 +303,4 @@ function IconPlug() { return <svg className={s} viewBox="0 0 24 24" fill="none" 
 function IconPlay() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5,3 19,12 5,21" /></svg>; }
 function IconStop() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>; }
 function IconHistory() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>; }
+function IconBolt() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>; }

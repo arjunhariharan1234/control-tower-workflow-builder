@@ -462,6 +462,15 @@ export default function LandingPage() {
             Integrations
           </button>
           <button
+            onClick={() => router.push('/triggers')}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+            style={{ color: '#d1d5db', border: '1px solid #2a2d3a' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFBE07'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2a2d3a'; e.currentTarget.style.color = '#d1d5db'; }}
+          >
+            Triggers
+          </button>
+          <button
             onClick={() => router.push('/playground?mode=templates')}
             className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
             style={{ color: '#d1d5db', border: '1px solid #2a2d3a' }}
