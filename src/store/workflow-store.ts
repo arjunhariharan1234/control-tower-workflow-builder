@@ -15,6 +15,8 @@ import { parseDSLToGraph } from '@/lib/dsl-parser';
 import { generateDSL } from '@/lib/dsl-generator';
 import { validateDSL, validateGraph } from '@/lib/dsl-validator';
 import { saveExecutionRun, getExecutionHistory } from '@/lib/execution-history';
+import { saveVersion as persistVersion } from '@/lib/version-history';
+import { VersionChangeType } from '@/types/version';
 import { v4 as uuidv4 } from 'uuid';
 
 interface WorkflowState {
@@ -51,6 +53,9 @@ interface WorkflowState {
   replayingRunId: string | null;
   executionHistory: ExecutionRun[];
   showHistoryDrawer: boolean;
+
+  // Version history
+  showVersionHistory: boolean;
 
   // Deployment state
   deploymentStatus: 'idle' | 'deploying' | 'success' | 'error';
@@ -99,6 +104,9 @@ interface WorkflowState {
   loadExecutionHistory: () => void;
   setShowHistoryDrawer: (show: boolean) => void;
 
+  setShowVersionHistory: (show: boolean) => void;
+  saveVersionSnapshot: (changeType: VersionChangeType) => void;
+
   newWorkflow: () => void;
 }
 
@@ -127,6 +135,7 @@ const DEFAULT_STATE = {
   replayingRunId: null,
   executionHistory: [],
   showHistoryDrawer: false,
+  showVersionHistory: false,
   deploymentStatus: 'idle' as const,
   deploymentMessage: '',
 };
@@ -672,6 +681,23 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     } else {
       set({ showHistoryDrawer: false });
     }
+  },
+
+  setShowVersionHistory: (show) => set({ showVersionHistory: show }),
+  saveVersionSnapshot: (changeType) => {
+    const state = get();
+    const dsl = generateDSL(state.nodes, state.edges, {
+      name: state.workflowName,
+      code: state.workflowCode,
+      description: state.workflowDescription,
+      metadata: state.workflowMetadata,
+    });
+    persistVersion(
+      state.workflowCode, // use code as workflow ID for matching
+      state.workflowCode,
+      dsl,
+      changeType,
+    );
   },
 
   newWorkflow: () => {
