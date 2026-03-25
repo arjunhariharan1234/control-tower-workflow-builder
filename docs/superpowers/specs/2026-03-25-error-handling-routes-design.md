@@ -31,36 +31,44 @@ Add Next.js error boundaries, a custom 404 page, and page-specific loading skele
 
 **Total: 8 new files**
 
+## Styling Convention
+
+All error pages and loading skeletons use **inline `style={{ }}` with hardcoded hex values**, consistent with the rest of the app (e.g., `style={{ background: '#0f1117' }}`). Tailwind utility classes are used only for layout (`flex`, `animate-pulse`, `rounded-lg`, etc.), not for colors.
+
 ## Error Pages
 
 ### `app/error.tsx`
 
 - `'use client'` directive (required by Next.js)
 - Receives `error` and `reset` props from Next.js
-- Dark themed: `--bg-primary` (#0f1117) background
-- Warning icon with gold accent (#FFBE07)
+- Dark themed: `#0f1117` background
+- Warning icon with gold accent (`#FFBE07`)
 - Shows error message in development, generic "Something went wrong" in production
 - Two actions: **"Try Again"** (calls `reset()`) and **"Go Home"** (navigates to `/`)
 - Centered layout with max-width container
+- Note: `reset()` re-renders the component tree but does not clear Zustand store state. If the error originated from corrupt store data, the error may re-throw. This is an acceptable limitation for v1.
 
 ### `app/global-error.tsx`
 
 - `'use client'` directive
 - Must include own `<html>` and `<body>` tags (layout is broken when this renders)
-- All styles inline (cannot rely on CSS imports)
+- **All styles must use hardcoded hex values** (e.g., `#0f1117`, `#FFBE07`) — CSS custom properties (`var(--bg-primary)`) will NOT be available since `globals.css` is not loaded when this component renders
 - Same visual treatment as `error.tsx`
 - Rare but critical safety net
 
 ### `app/not-found.tsx`
 
-- Large "404" text with gold accent
+- Server Component (no `'use client'` needed)
+- Large "404" text with gold accent (`#FFBE07`)
 - Message: "This page doesn't exist"
-- Single CTA: "Back to Control Tower" linking to `/`
+- Single CTA: `<Link href="/">Back to Control Tower</Link>` (uses `next/link`, not `useRouter`)
 - Dark theme, matches app aesthetic
 
 ## Loading Skeletons
 
-All skeletons use pulsing placeholder blocks: `animate-pulse` with `bg-[#1a1d27]` on `bg-[#0f1117]`. Each mirrors the actual page layout for a seamless transition.
+All skeletons are Server Components. They use `animate-pulse` for the pulsing effect with inline `style={{ background: '#1a1d27' }}` for skeleton blocks on a `#0f1117` background.
+
+**Note on existing `dynamic()` loaders:** The `/chat` and `/playground` pages already use `dynamic(() => import(...), { loading: ... })` for their canvas components. The route-level `loading.tsx` skeletons show during initial page navigation (before JS loads). The inline `dynamic()` loaders activate after hydration when the heavy canvas component is code-split. These are complementary, not conflicting — the skeleton appears first, then the page renders with the inline loader for the canvas portion.
 
 ### `app/loading.tsx` (Landing `/`)
 
@@ -72,13 +80,13 @@ All skeletons use pulsing placeholder blocks: `animate-pulse` with `bg-[#1a1d27]
 
 - Split pane layout
 - Left panel (~40%): 3 suggestion card placeholders + chat input skeleton at bottom
-- Right panel (~60%): empty canvas placeholder with centered spinner text
+- Right panel (~60%): canvas placeholder with subtle grid-dot pattern background (matching the React Flow canvas aesthetic)
 
 ### `app/playground/loading.tsx` (Visual Editor)
 
 - Top toolbar bar (fixed height ~48px, with placeholder icon circles)
 - Left sidebar (~240px width, with 4-5 pill-shaped row placeholders)
-- Center canvas area (large empty block)
+- Center canvas area (large block with grid-dot pattern)
 - Bottom panel bar (collapsed, ~36px height)
 
 ### `app/integrations/loading.tsx` (Marketplace)
@@ -94,20 +102,25 @@ All skeletons use pulsing placeholder blocks: `animate-pulse` with `bg-[#1a1d27]
 - Filter tabs: row of pill placeholders
 - List: 4-5 trigger row placeholders (full-width rounded rectangles)
 
-## Design Tokens
+## Design Tokens (Reference)
 
-All skeletons use existing CSS custom properties:
+Hex values used across all files:
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bg-primary` | #0f1117 | Page background |
-| `--bg-card` | #1a1d27 | Skeleton block fill |
-| `--bg-elevated` | #22252f | Skeleton block hover/variant |
-| `--border` | #2a2d3a | Subtle borders |
-| `--brand` | #FFBE07 | Accent on error pages |
+| Color | Hex | Usage |
+|-------|-----|-------|
+| Background | #0f1117 | Page background |
+| Card | #1a1d27 | Skeleton block fill |
+| Elevated | #22252f | Skeleton block variant |
+| Border | #2a2d3a | Subtle borders |
+| Brand/Gold | #FFBE07 | Accent on error pages |
+| Text primary | #f0f0f5 | Headings, body text |
+| Text secondary | #9ca3af | Subtext |
+| Text muted | #6b7280 | Placeholder text |
 
 ## Testing
 
-- Navigate to `/nonexistent-path` — should show custom 404
-- Throw an error in any page component — should show error boundary with "Try Again"
-- Verify each route shows its skeleton during initial load (throttle network in DevTools)
+- Navigate to `/nonexistent-path` — should show custom 404 with dark theme and gold accent
+- Throw an error in any page component — should show error boundary with "Try Again" and "Go Home"
+- Temporarily throw inside `layout.tsx` — should show `global-error.tsx` with its own `<html>/<body>` wrapper (restore after testing)
+- Verify each route shows its skeleton during initial load (throttle network to "Slow 3G" in DevTools)
+- Verify `reset()` on error boundary re-renders the page (works for transient errors; store corruption may re-throw)
