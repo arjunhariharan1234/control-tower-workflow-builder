@@ -20,15 +20,18 @@ Add the ability to upload CSV or XLSX files containing SOP / process steps in th
 ## Dependencies
 
 - `papaparse` — CSV parsing (client-side, ~15KB gzipped)
-- `xlsx` — XLSX/XLS parsing (client-side, ~90KB gzipped)
+- `@types/papaparse` — TypeScript types for papaparse (devDependency)
+- `xlsx` — XLSX/XLS parsing (client-side, ~90KB gzipped). **Must be dynamically imported** (`await import('xlsx')`) inside `parseFileToText()` to avoid bloating the client bundle — do NOT use top-level import. SheetJS bundles its own TypeScript types.
 
 ## Architecture
 
 ```
-File selected → parseFileToText(file) → text string → processInput(text) → parseNaturalLanguage(text) → WorkflowDSL → preview
+File selected → parseFileToText(file) → text string → processInput(text, attachment?) → parseNaturalLanguage(text) → WorkflowDSL → preview
 ```
 
 The entire existing pipeline stays unchanged. This feature adds a new "front door" that converts files to text before feeding them into the same flow.
+
+**Limitation:** Each spreadsheet row maps to one NL segment. Intra-row structure (e.g., a row containing both an Action and a Condition column) will be parsed as a single text string by the NL pipeline. Complex multi-column rows may produce a single step rather than branching logic. This is acceptable for v1.
 
 ## Files
 
@@ -36,30 +39,77 @@ The entire existing pipeline stays unchanged. This feature adds a new "front doo
 |------|--------|----------------|
 | `src/lib/file-parser.ts` | Create | `parseFileToText(file)` — CSV/XLSX → text string |
 | `src/app/chat/page.tsx` | Modify | Add attachment button, file chip, file processing flow |
-| `package.json` | Modify | Add `papaparse` and `xlsx` dependencies |
+| `package.json` | Modify | Add `papaparse`, `@types/papaparse`, and `xlsx` dependencies |
+
+## Data Model Changes
+
+### ChatMessage Extension
+
+Add an optional `attachment` field to the existing `ChatMessage` interface in `page.tsx`:
+
+```typescript
+interface ChatMessage {
+  // ...existing fields...
+  attachment?: {
+    name: string;
+    sizeBytes: number;
+  };
+}
+```
+
+### processInput Signature Update
+
+```typescript
+const processInput = useCallback(async (
+  text: string,
+  attachment?: { name: string; sizeBytes: number }
+) => { ... }, [isProcessing]);
+```
+
+When `attachment` is provided, the user message bubble includes the attachment indicator.
+
+### New State and Refs
+
+```typescript
+const [attachedFile, setAttachedFile] = useState<File | null>(null);
+const fileInputRef = useRef<HTMLInputElement>(null);
+```
+
+### Build Button Disabled Condition
+
+Update from:
+```typescript
+disabled={!input.trim() || isProcessing}
+```
+To:
+```typescript
+disabled={(!input.trim() && !attachedFile) || isProcessing}
+```
+
+This enables the Build button when a file is attached even with no typed text.
 
 ## UI Changes — Chat Input Area
 
 ### Attachment Button
 - Paperclip icon button positioned to the left of the "Build" button in the chat input bar
 - Styled consistently with the existing input area (dark theme, gold accent on hover)
-- Clicking opens a native file picker: `<input type="file" accept=".csv,.xlsx,.xls" />`
-- Hidden file input, triggered by the button click
+- Clicking opens a native file picker via hidden `<input type="file" accept=".csv,.xlsx,.xls" ref={fileInputRef} />`
+- The `fileInputRef` is used to trigger the picker: `fileInputRef.current?.click()`
 
 ### File Chip
 - When a file is selected, a pill/chip appears **above the textarea**
 - Shows: file icon (spreadsheet) + file name (truncated to ~30 chars) + X button to remove
 - Styled: `background: rgba(255,190,7,0.1)`, `border: 1px solid rgba(255,190,7,0.2)`, `color: #FFBE07`
-- Removing the file chip clears the attachment state
+- Removing the file chip clears `attachedFile` state and resets the file input value
 
 ### Submit Behavior
-- **File only:** Parse file → feed extracted text to `processInput()`
-- **File + typed text:** Prepend typed text as context: `"[user text]\n\nFrom uploaded file:\n[parsed content]"`
-- **Text only:** Existing behavior (unchanged)
+- **File only:** Parse file → feed extracted text to `processInput(parsedText, { name, sizeBytes })`
+- **File + typed text:** Prepend typed text: `"[user text]\n\nFrom uploaded file:\n[parsed content]"` → `processInput(combined, { name, sizeBytes })`
+- **Text only:** Existing behavior — `processInput(input)` unchanged
 
 ### User Message Display
-- When a message was created from a file upload, show a small attachment indicator below the message text
-- Shows: spreadsheet icon + filename + file size
+- When `msg.attachment` exists, show a small attachment indicator below the message text
+- Shows: spreadsheet icon + filename + file size (formatted: KB/MB)
 - Styled muted (`color: #6b7280`, `fontSize: '10px'`)
 
 ## File Parsing Logic — `src/lib/file-parser.ts`
@@ -67,23 +117,44 @@ The entire existing pipeline stays unchanged. This feature adds a new "front doo
 ### Core Function
 
 ```typescript
-parseFileToText(file: File): Promise<string>
+export async function parseFileToText(file: File): Promise<string>
 ```
 
 ### Validation
-- Max file size: 1MB — reject with error message if exceeded
+- Max file size: 1MB — reject with thrown error if exceeded
 - Supported extensions: `.csv`, `.xlsx`, `.xls` — reject others
 - Min content: at least 1 parseable row — reject empty files
 
 ### CSV Parsing (papaparse)
-- Use `Papa.parse(file, { header: false })` to get raw 2D array
-- Auto-detect delimiter (comma, semicolon, tab)
+
+PapaParse's File API is callback-based. Wrap in a Promise:
+
+```typescript
+const rows = await new Promise<string[][]>((resolve, reject) => {
+  Papa.parse(file, {
+    header: false,
+    skipEmptyLines: true,
+    complete: (results) => resolve(results.data as string[][]),
+    error: (err) => reject(err),
+  });
+});
+```
+
+Auto-detects delimiter (comma, semicolon, tab) by default.
 
 ### XLSX Parsing (xlsx/SheetJS)
-- Read file as ArrayBuffer
-- Use `XLSX.read(buffer, { type: 'array' })`
-- Read first sheet only: `workbook.SheetNames[0]`
-- Convert to 2D array: `XLSX.utils.sheet_to_json(sheet, { header: 1 })`
+
+Dynamically import to avoid bundle bloat:
+
+```typescript
+const XLSX = await import('xlsx');
+const buffer = await file.arrayBuffer();
+const workbook = XLSX.read(buffer, { type: 'array' });
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1 });
+```
+
+Read first sheet only.
 
 ### Text Flattening
 1. Get 2D array of rows from CSV or XLSX parser
@@ -96,10 +167,12 @@ parseFileToText(file: File): Promise<string>
 6. Return the complete text string
 
 ### Error Handling
-- File read errors → show error message in chat: "Could not read the file. Please check the format and try again."
-- Parse errors → same treatment
-- Empty file → "The file appears to be empty. Please upload a file with process steps."
-- File too large → "File is too large (max 1MB). Please reduce the file size."
+- File read errors → throw with message: "Could not read the file. Please check the format and try again."
+- Parse errors → throw with same message
+- Empty file → throw: "The file appears to be empty. Please upload a file with process steps."
+- File too large → throw: "File is too large (max 1MB). Please reduce the file size."
+
+Errors are caught in `page.tsx` and displayed as system messages in the chat.
 
 ## Design Tokens
 
@@ -113,8 +186,9 @@ Uses existing project colors:
 - Upload a CSV with headers (Step Name, Action, Condition) → should produce a workflow
 - Upload a CSV without headers (just rows of text) → should still produce a workflow
 - Upload an XLSX file → should work identically to CSV
-- Upload a file > 1MB → should show error
+- Upload a file > 1MB → should show error message in chat
 - Upload a non-CSV/XLSX file → should be rejected by file picker
 - Upload + type text → text should be prepended as context
 - Click X on file chip → should remove the attachment
 - Upload an empty file → should show "file appears to be empty" error
+- Build button should be enabled when file is attached (even with empty textarea)
