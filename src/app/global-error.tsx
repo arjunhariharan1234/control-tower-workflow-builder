@@ -63,21 +63,40 @@ export default function GlobalError({
             A critical error occurred. Please try refreshing the page.
           </p>
 
-          <button
-            onClick={reset}
-            style={{
-              padding: '10px 24px',
-              fontSize: '14px',
-              fontWeight: 500,
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              background: '#FFBE07',
-              color: '#000',
-            }}
-          >
-            Try Again
-          </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              onClick={reset}
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: 500,
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                background: '#FFBE07',
+                color: '#000',
+              }}
+            >
+              Try Again
+            </button>
+            <a
+              href="/"
+              style={{
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: 500,
+                borderRadius: '8px',
+                border: '1px solid #2a2d3a',
+                background: 'transparent',
+                color: '#9ca3af',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Go Home
+            </a>
+          </div>
         </div>
       </body>
     </html>
