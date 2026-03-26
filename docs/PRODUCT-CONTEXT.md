@@ -105,7 +105,7 @@ Each run is persisted with per-step timing, status, and error details.
 | 5 | Execution History & Replay | `/playground` (toolbar) | Shipped |
 | 6 | Webhook Triggers & Schedules | `/triggers` + `/api/webhook` | Shipped |
 | 7 | Version History & Rollback | `/playground` (toolbar menu) | Shipped |
-| 8 | Error Handling Routes | — | Planned |
+| 8 | Error Handling Routes | All routes (error, 404, loading) | Shipped |
 
 ---
 
