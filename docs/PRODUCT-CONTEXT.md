@@ -107,6 +107,7 @@ Each run is persisted with per-step timing, status, and error details.
 | 7 | Version History & Rollback | `/playground` (toolbar menu) | Shipped |
 | 8 | Error Handling Routes | All routes (error, 404, loading) | Shipped |
 | 9 | Document Upload (CSV/XLSX) | `/chat` (attachment) | Shipped |
+| 10 | SOP Workflow Templates (7) | `/playground` (template picker) | Shipped |
 
 ---
 
