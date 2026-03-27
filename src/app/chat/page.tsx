@@ -10,6 +10,7 @@ import { WorkflowDSL, StepExecution, ExecutionStatus } from '@/types/workflow';
 import { Node, Edge } from 'reactflow';
 import { saveWorkflow } from '@/lib/saved-workflows';
 import { v4 as uuid } from 'uuid';
+import { parseFileToText } from '@/lib/file-parser';
 
 const MiniWorkflowCanvas = dynamic(() => import('@/components/canvas/MiniWorkflowCanvas'), {
   ssr: false,
@@ -73,6 +74,7 @@ interface ChatMessage {
   thinkingSteps?: ThinkingStep[];
   parseResult?: ParseResult;
   isThinking?: boolean;
+  attachment?: { name: string; sizeBytes: number };
 }
 
 // ── Simulation types ─────────────────────────────────────────────────
@@ -102,6 +104,8 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll messages
   useEffect(() => {
@@ -117,14 +121,15 @@ export default function ChatPage() {
 
   // ── Process natural language ───────────────────────────────────────
 
-  const processInput = useCallback(async (text: string) => {
-    if (!text.trim() || isProcessing) return;
+  const processInput = useCallback(async (text: string, attachment?: { name: string; sizeBytes: number }) => {
+    if ((!text.trim() && !attachment) || isProcessing) return;
 
     const userMsg: ChatMessage = {
       id: uuid(),
       role: 'user',
       content: text.trim(),
       timestamp: new Date(),
+      attachment,
     };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -188,15 +193,43 @@ export default function ChatPage() {
     setIsProcessing(false);
   }, [isProcessing]);
 
+  const triggerSubmit = async () => {
+    if (attachedFile) {
+      try {
+        const parsedText = await parseFileToText(attachedFile);
+        const finalText = input.trim()
+          ? `${input.trim()}\n\nFrom uploaded file:\n${parsedText}`
+          : parsedText;
+        const attachment = { name: attachedFile.name, sizeBytes: attachedFile.size };
+        setAttachedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (inputRef.current) inputRef.current.style.height = 'auto';
+        processInput(finalText, attachment);
+      } catch (err) {
+        const errorMsg: ChatMessage = {
+          id: uuid(),
+          role: 'system',
+          content: (err as Error).message,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        setAttachedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    } else {
+      processInput(input);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    processInput(input);
+    triggerSubmit();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      processInput(input);
+      triggerSubmit();
     }
   };
 
@@ -379,11 +412,24 @@ export default function ChatPage() {
                       style={msg.role === 'user' ? {
                         background: 'rgba(255,190,7,0.1)',
                         border: '1px solid rgba(255,190,7,0.2)',
+                      } : msg.role === 'system' ? {
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.2)',
                       } : {
                         background: '#13151d',
                         border: '1px solid #2a2d3a',
                       }}
                     >
+                      {msg.role === 'system' && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <svg className="w-3.5 h-3.5" style={{ color: '#ef4444' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                          <span className="text-[10px] font-semibold" style={{ color: '#ef4444' }}>Error</span>
+                        </div>
+                      )}
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2.5">
                           <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: GOLD }}>
@@ -398,6 +444,17 @@ export default function ChatPage() {
                       <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: msg.role === 'user' ? '#f0f0f5' : '#d1d5db' }}>
                         {renderMarkdown(msg.content)}
                       </div>
+                      {msg.attachment && (
+                        <div className="flex items-center gap-1.5 mt-2" style={{ color: '#6b7280', fontSize: '10px' }}>
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                          <span>{msg.attachment.name}</span>
+                          <span>·</span>
+                          <span>{msg.attachment.sizeBytes < 1024 ? `${msg.attachment.sizeBytes}B` : `${(msg.attachment.sizeBytes / 1024).toFixed(0)}KB`}</span>
+                        </div>
+                      )}
                       {msg.parseResult && (
                         <div className="flex items-center gap-2 mt-3 pt-3" style={{ borderTop: '1px solid #2a2d3a' }}>
                           <div className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
@@ -463,6 +520,43 @@ export default function ChatPage() {
           <div className="px-6 pb-5 pt-2">
             <form onSubmit={handleSubmit} className="max-w-2xl mx-auto relative">
               <div className="rounded-2xl overflow-hidden" style={{ background: '#13151d', border: '1px solid #2a2d3a' }}>
+                {/* File chip */}
+                {attachedFile && (
+                  <div className="flex items-center gap-2 px-4 pt-3">
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+                      style={{
+                        background: 'rgba(255,190,7,0.1)',
+                        border: '1px solid rgba(255,190,7,0.2)',
+                        color: GOLD,
+                      }}
+                    >
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                      </svg>
+                      <span className="truncate max-w-[200px]">{attachedFile.name}</span>
+                      <span style={{ color: '#6b7280' }}>
+                        ({attachedFile.size < 1024 ? `${attachedFile.size}B` : `${(attachedFile.size / 1024).toFixed(0)}KB`})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="ml-1 hover:opacity-80"
+                        style={{ color: '#6b7280' }}
+                      >
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -475,12 +569,40 @@ export default function ChatPage() {
                   style={{ color: '#f0f0f5', maxHeight: '160px' }}
                 />
                 <div className="flex items-center justify-between px-4 pb-3">
-                  <span className="text-[10px]" style={{ color: '#4a4d5a' }}>
-                    Press Enter to send · Shift+Enter for new line
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setAttachedFile(file);
+                      }}
+                    />
+                    {/* Attachment button */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isProcessing}
+                      className="transition-colors disabled:opacity-30"
+                      style={{ color: '#6b7280' }}
+                      onMouseEnter={(e) => { if (!isProcessing) (e.currentTarget as HTMLElement).style.color = GOLD; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#6b7280'; }}
+                      title="Upload CSV or XLSX file"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                      </svg>
+                    </button>
+                    <span className="text-[10px]" style={{ color: '#4a4d5a' }}>
+                      Press Enter to send · Shift+Enter for new line
+                    </span>
+                  </div>
                   <button
                     type="submit"
-                    disabled={!input.trim() || isProcessing}
+                    disabled={(!input.trim() && !attachedFile) || isProcessing}
                     className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110"
                     style={{ background: GOLD, color: '#000' }}
                   >
