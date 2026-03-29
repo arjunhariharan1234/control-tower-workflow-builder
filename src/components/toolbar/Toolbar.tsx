@@ -27,6 +27,7 @@ export default function Toolbar() {
     simulationRunning,
     setShowHistoryDrawer,
     setShowVersionHistory,
+    setShowDirectoryDrawer,
     clearExecution,
     saveVersionSnapshot,
   } = useWorkflowStore();
@@ -122,6 +123,7 @@ export default function Toolbar() {
     { label: 'Execution History', icon: <IconHistory />, onClick: () => { setShowHistoryDrawer(true); setMenuOpen(false); } },
     { label: 'Integrations', icon: <IconPlug />, onClick: () => { router.push('/integrations'); setMenuOpen(false); } },
     { label: 'Triggers & Schedules', icon: <IconBolt />, onClick: () => { router.push('/triggers'); setMenuOpen(false); }, separator: true },
+    { label: 'Communication Directory', icon: <IconContacts />, onClick: () => { setShowDirectoryDrawer(true); setMenuOpen(false); } },
   ];
 
   return (
@@ -310,3 +312,4 @@ function IconStop() { return <svg className={s} viewBox="0 0 24 24" fill="none" 
 function IconHistory() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>; }
 function IconBolt() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>; }
 function IconVersions() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" /></svg>; }
+function IconContacts() { return <svg className={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>; }

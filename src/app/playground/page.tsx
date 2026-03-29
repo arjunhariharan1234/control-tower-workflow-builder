@@ -12,6 +12,7 @@ import DeployModal from '@/components/modals/DeployModal';
 import WorkflowsDrawer from '@/components/modals/WorkflowsDrawer';
 import ExecutionHistoryDrawer from '@/components/modals/ExecutionHistoryDrawer';
 import VersionHistoryDrawer from '@/components/modals/VersionHistoryDrawer';
+import CommunicationDirectoryDrawer from '@/components/modals/CommunicationDirectoryDrawer';
 import { useWorkflowStore } from '@/store/workflow-store';
 import { getTemplateById } from '@/lib/templates';
 import { getSavedWorkflowById } from '@/lib/saved-workflows';
@@ -78,6 +79,7 @@ export default function PlaygroundPage() {
       <WorkflowsDrawer />
       <ExecutionHistoryDrawer />
       <VersionHistoryDrawer />
+      <CommunicationDirectoryDrawer />
     </div>
   );
 }

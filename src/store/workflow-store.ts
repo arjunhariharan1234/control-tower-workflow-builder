@@ -57,6 +57,9 @@ interface WorkflowState {
   // Version history
   showVersionHistory: boolean;
 
+  // Communication directory
+  showDirectoryDrawer: boolean;
+
   // Deployment state
   deploymentStatus: 'idle' | 'deploying' | 'success' | 'error';
   deploymentMessage: string;
@@ -105,6 +108,7 @@ interface WorkflowState {
   setShowHistoryDrawer: (show: boolean) => void;
 
   setShowVersionHistory: (show: boolean) => void;
+  setShowDirectoryDrawer: (show: boolean) => void;
   saveVersionSnapshot: (changeType: VersionChangeType) => void;
 
   newWorkflow: () => void;
@@ -136,6 +140,7 @@ const DEFAULT_STATE = {
   executionHistory: [],
   showHistoryDrawer: false,
   showVersionHistory: false,
+  showDirectoryDrawer: false,
   deploymentStatus: 'idle' as const,
   deploymentMessage: '',
 };
@@ -684,6 +689,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   setShowVersionHistory: (show) => set({ showVersionHistory: show }),
+  setShowDirectoryDrawer: (show) => set({ showDirectoryDrawer: show }),
   saveVersionSnapshot: (changeType) => {
     const state = get();
     const dsl = generateDSL(state.nodes, state.edges, {
