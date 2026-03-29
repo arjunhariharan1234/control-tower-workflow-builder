@@ -52,6 +52,31 @@ export default function NodeConfigPanel() {
             <input type="text" value={data.taskType || ''} onChange={(e) => updateNodeData(selectedNode.id, { taskType: e.target.value })} placeholder="e.g., CALL_TASK" className="w-full inp text-white focus:border-[#FFBE07] placeholder:text-[#363944]" />
           </Field>
         )}
+        {(['DRIVER_CALL', 'AGENTIC_CALL_RESPONSE', 'NOTIFICATION', 'ESCALATION'].includes(data.taskType || '')) && (
+          <Field label="Recipient Group">
+            <select
+              value={(data.config as Record<string, string>)?.recipientGroup || ''}
+              onChange={(e) => updateNodeData(selectedNode.id, {
+                config: { ...(data.config || {}), recipientGroup: e.target.value || undefined }
+              })}
+              className="w-full inp text-white focus:border-[#FFBE07]"
+            >
+              <option value="">Select group...</option>
+              <optgroup label="Escalation">
+                <option value="ESCALATION_L1">Escalation L1</option>
+                <option value="ESCALATION_L2">Escalation L2</option>
+                <option value="ESCALATION_L3">Escalation L3</option>
+              </optgroup>
+              <optgroup label="Department">
+                <option value="MHD">MHD</option>
+                <option value="DEPOT_TEAM">Depot Team</option>
+                <option value="ICARE">iCare</option>
+                <option value="HOD">HOD</option>
+                <option value="SUPPLY_CHAIN">Supply Chain</option>
+              </optgroup>
+            </select>
+          </Field>
+        )}
         <ConfigEditor nodeId={selectedNode.id} config={data.config || {}} />
         {(data.stepType === 'SERVICE_TASK' || data.stepType === 'USER_TASK') && (
           <MandatoryInputEditor nodeId={selectedNode.id} inputs={data.mandatoryInput || {}} />
