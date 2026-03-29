@@ -76,7 +76,7 @@ Next.js API routes (/api/recipients)
     ↕ fetch()
 CommunicationDirectoryDrawer (UI component)
     ↕ referenced by
-Node Config Panel (recipient_group_id dropdown on workflow steps)
+Node Config Panel (recipientGroup dropdown on workflow steps)
 ```
 
 ## Files
@@ -89,8 +89,9 @@ Node Config Panel (recipient_group_id dropdown on workflow steps)
 | `src/types/recipient.ts` | Create | `NotificationRecipient` TypeScript interface |
 | `src/components/modals/CommunicationDirectoryDrawer.tsx` | Create | Drawer UI with CRUD |
 | `src/components/toolbar/Toolbar.tsx` | Modify | Add menu item + drawer toggle state |
-| `src/store/workflow-store.ts` | Modify | Add `showDirectoryDrawer` state |
-| `src/app/playground/page.tsx` | Modify | Mount `CommunicationDirectoryDrawer` |
+| `src/store/workflow-store.ts` | Modify | Add `showDirectoryDrawer: boolean` state + `setShowDirectoryDrawer` setter |
+| `src/app/playground/page.tsx` | Modify | Mount `CommunicationDirectoryDrawer` at root level alongside other drawers (not inside the canvas flex layout) |
+| `.env.local.example` | Create | Document required Supabase env vars |
 
 ## TypeScript Interface
 
@@ -116,19 +117,33 @@ export interface NotificationRecipient {
 
 ## Supabase Client
 
+Two clients: a public client for browser-side operations and a server-only client for API routes.
+
 ```typescript
 // src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Browser-safe client (used by components if needed for real-time, etc.)
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Server-only client (used by API routes — bypasses RLS)
+export function createServerClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 ```
 
 Environment variables:
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key (browser-safe)
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-only, NOT prefixed with NEXT_PUBLIC_)
+
+**Note:** This is a single-tenant app with no RLS configured. The service role key is used in API routes for simplicity. The anon key is exposed to the browser but only used for potential future real-time features — all CRUD goes through the API routes.
 
 ## API Routes
 
@@ -164,7 +179,7 @@ Returns: `{ success: true }`
 
 ### Trigger
 - New hamburger menu item: **"Communication Directory"** with an address-book icon
-- Position: after "Triggers & Schedules" in the menu, before the separator
+- Position: as the last item in the `menuItems` array (after "Triggers & Schedules")
 - Opens `CommunicationDirectoryDrawer` via `showDirectoryDrawer` in the workflow store
 
 ### Drawer Layout (right slide-over, 480px wide)
@@ -209,11 +224,11 @@ Triggered by "Add Recipient" button or Edit icon on a card. Modal overlay matchi
 
 ### Node Config Panel Changes
 
-For steps with `task_type` in `['DRIVER_CALL', 'AGENTIC_CALL_RESPONSE', 'NOTIFICATION']` or `step_type === 'USER_TASK'` with escalation context:
+For steps where `data.taskType` (camelCase, matching the React node data convention) is in `['DRIVER_CALL', 'AGENTIC_CALL_RESPONSE', 'NOTIFICATION', 'ESCALATION']` or `data.stepType === 'USER_TASK'` with escalation context:
 
 - Add a **"Recipient Group"** dropdown to the config panel
 - Dropdown lists distinct `group_type` values from the directory (fetched on mount)
-- Selecting a group stores `config.recipient_group_id: string` on the workflow step node data
+- Selecting a group stores `config.recipientGroup: string` on the workflow step node data (stores the `group_type` value, e.g., `"ESCALATION_L1"`)
 - Shows a small preview: "3 recipients in this group" with channel icons
 
 This is a lightweight integration — the directory provides the data, the step config references it.
@@ -238,8 +253,9 @@ User must:
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+   SUPABASE_SERVICE_ROLE_KEY=eyJ...
    ```
-5. Add the same env vars to Vercel project settings for production
+5. Add all 3 env vars to Vercel project settings for production (mark `SUPABASE_SERVICE_ROLE_KEY` as sensitive)
 
 ## Testing
 
